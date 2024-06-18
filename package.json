@@ -1,6 +1,6 @@
 {
   "name": "student-management-system-oop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "StudentManager CLI: Efficiently manage student records. Add, update, and view student information easily with this user-friendly command-line tool.",
   "main": "index.js",
   "bin": "index.js",

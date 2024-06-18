@@ -15,74 +15,76 @@ class Student {
         this.balance = 1000;
     }
     // Method to enroll a Student in a Course
-    enroll_course(course) {
-        this.courses.push(course);
+    enroll_course(course, fee) {
+        if (this.balance >= fee) {
+            this.courses.push(course);
+            this.balance -= fee;
+            console.log(chalk.bold(`\nEnrollment complete! ${chalk.cyan.bold(this.name)} is now in ${chalk.cyan.bold(course)}. Course fee: $${chalk.cyan.bold(fee)}. Remaining Balance: $${chalk.cyan.bold(this.balance)}`));
+        }
+        else {
+            console.log(chalk.red.bold(`\nError: Insufficient balance to enroll in ${course}. Course fee: $${fee}. Current balance: $${this.balance}.`));
+        }
     }
     // Method to view a Student Balance
     view_balance() {
-        console.log(chalk.bold(`Account balance for ${chalk.cyan.bold(this.name)}: $${chalk.cyan.bold(this.balance)}`));
-    }
-    // Method to pay student fees
-    pay_fees(amount) {
-        this.balance -= amount;
-        console.log(chalk.bold(`Payment received! ${chalk.cyan.bold(this.name)}'s fee of $${chalk.cyan.bold(amount)} is now settled.`));
-        console.log(chalk.bold(`Remaining Balance: $${chalk.blue.bold(this.balance)}`));
+        console.log(chalk.bold(`\nAccount balance for ${chalk.cyan.bold(this.name)}: $${chalk.cyan.bold(this.balance)}`));
     }
     // Method to display Student Status
     show_status() {
         console.log(chalk.bold(`Name: ${chalk.green.bold(this.name)}`));
         console.log(chalk.bold(`ID: ${chalk.green.bold(this.id)}`));
-        console.log(chalk.bold(`Courses: ${chalk.green.bold(this.courses)}`));
+        console.log(chalk.bold(`Courses: ${chalk.green.bold(this.courses.join(", "))}`));
         console.log(chalk.bold(`Balance: $${chalk.green.bold(this.balance)}`));
     }
 }
 // Defining a student_manager class to manage students
 class Student_manager {
     students;
+    courses;
     constructor() {
         this.students = [];
+        this.courses = [
+            { name: "Java", fee: 300 },
+            { name: "Web 3.0", fee: 400 },
+            { name: "React.js", fee: 350 },
+            { name: "JavaScript", fee: 200 },
+            { name: "Python", fee: 250 },
+        ];
     }
     // Method to add a new Student
     add_student(name) {
         let student = new Student(name);
         this.students.push(student);
-        console.log(chalk.bold(`Student: ${chalk.cyan.bold(name)} successfully registered! Student ID: ${chalk.cyan.bold(student.id)}`)); // sentence will be change
+        console.log(chalk.bold(`\nStudent: ${chalk.cyan.bold(name)} successfully registered! Student ID: ${chalk.cyan.bold(student.id)}`));
     }
-    // Method to find a student by student_id
-    find_student(student_id) {
-        return this.students.find((std) => std.id === student_id);
+    // Method to find a student by name
+    find_student_by_name(name) {
+        return this.students.find((std) => std.name === name);
     }
-    //Method to enroll a student in a course
-    enroll_student(student_id, course) {
-        let student = this.find_student(student_id);
-        if (student) {
-            student.enroll_course(course);
-            console.log(chalk.bold(`Enrollment complete! ${chalk.cyan.bold(student.name)} is now in ${chalk.cyan.bold(course)}.`));
+    // Method to enroll a student in a course
+    enroll_student(name, course_name) {
+        let student = this.find_student_by_name(name);
+        let course = this.courses.find((c) => c.name === course_name);
+        if (student && course) {
+            student.enroll_course(course.name, course.fee);
+        }
+        else if (!course) {
+            console.log(chalk.red.bold(`Error: Course ${course_name} not found.`));
         }
     }
     // Method to view a student balance
-    view_student_balance(student_id) {
-        let student = this.find_student(student_id);
+    view_student_balance(name) {
+        let student = this.find_student_by_name(name);
         if (student) {
             student.view_balance();
         }
         else {
-            console.log(chalk.red.bold("Error: Student ID not recognized. Please re-enter."));
-        }
-    }
-    // Method to pay Student Fees
-    pay_student_fees(student_id, amount) {
-        let student = this.find_student(student_id);
-        if (student) {
-            student.pay_fees(amount);
-        }
-        else {
-            console.log(chalk.red.bold("Error: Student ID not recognized. Please re-enter."));
+            console.log(chalk.red.bold("\nError: Student not recognized. Please re-enter."));
         }
     }
     // Method to display Student Status
-    show_student_status(student_id) {
-        let student = this.find_student(student_id);
+    show_student_status(name) {
+        let student = this.find_student_by_name(name);
         if (student) {
             student.show_status();
         }
@@ -91,7 +93,7 @@ class Student_manager {
 // Main function to run the program
 async function main() {
     console.log(chalk.bold.hex("#5cc6ff")("\n \tWelcome to Your Student Manager CLI."));
-    console.log(chalk.bold.hex("#5cc6ff")("\n \tEffortlessly manage student records with ease. Add, update, and view student information quickly and efficiently.\n "));
+    console.log(chalk.bold.hex("#5cc6ff")("\n\tEffortlessly manage student records with ease. Add, update, and view student information quickly and efficiently.\n "));
     console.log(chalk.bold.yellow("-".repeat(120)));
     let student_manager = new Student_manager();
     // While loop to keep program running
@@ -100,12 +102,11 @@ async function main() {
             {
                 name: "choice",
                 type: "list",
-                message: chalk.green("Select an option to proceed:"),
+                message: chalk.green("\nSelect an option to proceed:\n"),
                 choices: [
                     "Add Student",
                     "Enroll Student",
                     "View Student Balance",
-                    "Pay Fees",
                     "Show Status",
                     "Exit",
                 ],
@@ -124,57 +125,50 @@ async function main() {
                 student_manager.add_student(name_input.name);
                 break;
             case "Enroll Student":
-                let course_input = await inquirer.prompt([
+                let student_list = student_manager.students.map((student) => student.name);
+                let enroll_input = await inquirer.prompt([
                     {
-                        name: "student_id",
-                        type: "number",
-                        message: chalk.rgb(233, 36, 116)("Provide the unique student's ID:"),
+                        name: "student_name",
+                        type: "list",
+                        message: chalk.rgb(233, 36, 116)("Select the student:"),
+                        choices: student_list,
                     },
                     {
                         name: "course",
-                        type: "input",
-                        message: chalk.hex("#5cc6ff")("Provide the course's name"),
+                        type: "list",
+                        message: chalk.hex("#5cc6ff")("Select the course:"),
+                        choices: student_manager.courses.map((course) => `${course.name} - $${course.fee}`),
                     },
                 ]);
-                student_manager.enroll_student(course_input.student_id, course_input.course);
+                let selected_course = enroll_input.course.split(" - ")[0];
+                student_manager.enroll_student(enroll_input.student_name, selected_course);
                 break;
             case "View Student Balance":
+                let balance_student_list = student_manager.students.map((student) => student.name);
                 let balance_input = await inquirer.prompt([
                     {
-                        name: "student_id",
-                        type: "number",
-                        message: chalk.rgb(233, 36, 116)("Provide the unique student's ID"),
+                        name: "student_name",
+                        type: "list",
+                        message: chalk.rgb(233, 36, 116)("Select the student:"),
+                        choices: balance_student_list,
                     },
                 ]);
-                student_manager.view_student_balance(balance_input.student_id);
-                break;
-            case "Pay Fees":
-                let fees_input = await inquirer.prompt([
-                    {
-                        name: "student_id",
-                        type: "number",
-                        message: chalk.rgb(233, 36, 116)("Provide the unique student's ID"),
-                    },
-                    {
-                        name: "amount",
-                        type: "number",
-                        message: chalk.hex("#5cc6ff")("Provide the amount to be paid:"),
-                    },
-                ]);
-                student_manager.pay_student_fees(fees_input.student_id, fees_input.amount);
+                student_manager.view_student_balance(balance_input.student_name);
                 break;
             case "Show Status":
+                let status_student_list = student_manager.students.map((student) => student.name);
                 let status_input = await inquirer.prompt([
                     {
-                        name: "student_id",
-                        type: "number",
-                        message: chalk.rgb(233, 36, 116)("Provide the unique student's ID"),
+                        name: "student_name",
+                        type: "list",
+                        message: chalk.rgb(233, 36, 116)("Select the student:"),
+                        choices: status_student_list,
                     },
                 ]);
-                student_manager.show_student_status(status_input.student_id);
+                student_manager.show_student_status(status_input.student_name);
                 break;
             case "Exit":
-                console.log(chalk.cyan.bold("Thank you for using Student Manager CLI. Your records have been saved. Goodbye!"));
+                console.log(chalk.cyan.bold("\nThank you for using Student Manager CLI. Your records have been saved. Goodbye!"));
                 process.exit();
         }
     }
